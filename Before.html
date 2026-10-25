@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Line Flow Simulation — Existing vs Proposed (Single-Piece Flow)</title>
+<style>
+  :root{ --red:#dc2626; --green:#16a34a; --ink:#e2e8f0; --bg:#0b1220; --card:#111a2e; --line:#1e293b; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Segoe UI',system-ui,Arial,sans-serif}
+  header.top{padding:18px 22px 10px}
+  h1{margin:0;font-size:20px}
+  .sub{color:#94a3b8;font-size:12.5px;margin-top:6px;line-height:1.5}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 22px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#0e1729;position:sticky;top:0;z-index:5}
+  button{background:#1e293b;color:var(--ink);border:1px solid #334155;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer}
+  button:hover{background:#273449}
+  button.primary{background:var(--green);border-color:var(--green);color:#fff}
+  .seg{display:flex;border:1px solid #334155;border-radius:8px;overflow:hidden}
+  .seg button{border:0;border-radius:0;padding:7px 12px}
+  .seg button.active{background:#2563eb;color:#fff}
+  label.chk{display:flex;gap:6px;align-items:center;font-size:13px;color:#cbd5e1;cursor:pointer}
+  .hint{font-size:12px;color:#64748b}
+  .panels{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 22px}
+  @media(max-width:1100px){.panels{grid-template-columns:1fr}}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;--glow:var(--red)}
+  .panel.after{--glow:var(--green)}
+  .panel.wide{grid-column:1/-1}
+  .ph{display:flex;align-items:center;gap:10px;padding:10px 14px;font-weight:700;font-size:14px;letter-spacing:.4px;color:#fff}
+  .ph .tag{background:rgba(255,255,255,.18);border-radius:6px;padding:2px 8px;font-size:11px}
+  .ph .len{margin-left:auto;font-size:12px;font-weight:600;background:rgba(0,0,0,.25);padding:3px 8px;border-radius:6px}
+  .ph.before{background:linear-gradient(90deg,#b91c1c,#dc2626)}
+  .ph.after{background:linear-gradient(90deg,#15803d,#16a34a)}
+  .stage{padding:6px}
+  svg{display:block;width:100%;height:auto;background:#f8fafc;border-radius:8px}
+  svg text{user-select:none}
+  .pf{padding:8px 14px 12px;border-top:1px solid var(--line)}
+  .status{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:#93c5fd;min-height:16px}
+  .panel.after .status{color:#86efaf}
+  .pf .cap{font-size:12px;color:#94a3b8;line-height:1.45;margin-top:4px}
+  .prog{height:5px;background:#1e293b;border-radius:3px;margin-top:8px;overflow:hidden}
+  .prog i{display:block;height:100%;width:0%;background:var(--glow)}
+  .parts{font-size:11.5px;color:#cbd5e1;margin-top:6px}
+  /* SVG styles — ALL lines SOLID (no dotted / dashed lines anywhere) */
+  .stn rect{fill:#f4b183;stroke:#c2410c;stroke-width:1.2}
+  .stn.store rect{fill:#86efac;stroke:#15803d}
+  .stn text{font-size:10px;font-weight:700;fill:#7c2d12;text-anchor:middle;pointer-events:none}
+  .stn.on rect{stroke-width:3;filter:drop-shadow(0 0 5px var(--glow))}
+  .edge-main{fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+  .edge-feed{fill:none;stroke-width:1.8;opacity:.75}
+  .edge-child{fill:none;stroke-width:1.6;opacity:.6;stroke-linecap:round}
+  .eplabel{font-size:10.5px;font-weight:800;letter-spacing:.6px;paint-order:stroke;stroke:#fff;stroke-width:3px}
+  .wippile{animation:pulse 1.6s ease-in-out infinite}
+  .wippile rect{fill:var(--red);opacity:.92}
+  .wippile text{fill:#fff;font-size:10px;font-weight:800;text-anchor:middle}
+  .chip{animation:pulse 2.2s ease-in-out infinite}
+  .chip rect{fill:var(--green)} .chip text{fill:#fff;font-size:9.5px;font-weight:800;text-anchor:middle}
+  @keyframes pulse{0%,100%{opacity:.95}50%{opacity:.5}}
+  .zlabel{font-size:13px;font-weight:800;fill:#475569;letter-spacing:2px;text-anchor:middle}
+  .gwlabel{font-size:8.5px;font-weight:700;fill:#a16207;text-anchor:middle}
+  .itag{font-size:9px;font-weight:700;fill:#475569;text-anchor:end}
+  .ghost rect{fill:none;stroke:#94a3b8}
+  .ghost text{fill:#64748b;font-size:9.5px;font-weight:700;text-anchor:middle}
+  .ghost .sub2{font-size:7.5px;font-weight:600}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:12px;padding:0 22px 8px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .card h4{margin:0 0 8px;font-size:12px;letter-spacing:.6px;color:#94a3b8;text-transform:uppercase}
+  .bar{height:20px;border-radius:4px;display:flex;align-items:center;padding:0 8px;font-size:11.5px;font-weight:800;color:#fff;margin-bottom:5px;min-width:60px;transition:width .8s ease}
+  .bar.b{background:var(--red)} .bar.a{background:var(--green)}
+  .delta{margin-top:6px;font-size:12px;font-weight:800;color:#4ade80}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;padding:10px 22px;font-size:12px;color:#cbd5e1;align-items:center}
+  .sw{display:inline-block;width:22px;height:0;border-top:3px solid;margin-right:6px;vertical-align:middle}
+  .note{padding:0 22px 20px;color:#64748b;font-size:11.5px;line-height:1.55}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>Assembly Line Flow Simulation — Existing vs Proposed (Spaghetti Diagram)</h1>
+  <div class="sub">Scope per Excel flow table only: Actuator-2 → EMEGR-2 → (Module-3) → Module-2 → Store. All other areas ignored as requested.<br>
+  <b style="color:#f87171">Existing:</b> OP-005/OP-006 sit off-line in Module-3 → cross-floor batch transfers. &nbsp;<b style="color:#4ade80">Proposed:</b> OP-005/OP-006 moved into Module-2 → one continuous line, single-piece flow.<br>
+  Layout matched to floor plan photo: OP160-200 top / OP10-40 bottom in Actuator-2 • Module-2 OP-10…70 right column, OP-90A…OP-140 left column • STORE (FG) + main gang way at <b>top</b> • every line-to-line move crosses a <b>gang way</b> • all flow lines solid. A dedicated full-width <b>EXISTING-only view</b> is added below.</div>
+</header>
+
+<div class="controls">
+  <button id="btnPlay" class="primary">⏸ Pause</button>
+  <button id="btnReset">⟲ Reset</button>
+  <div class="seg" id="spd">
+    <button data-s="0.5">0.5×</button><button data-s="1" class="active">1×</button><button data-s="2">2×</button>
+  </div>
+  <label class="chk"><input type="checkbox" id="chkOverlay" checked> Spaghetti overlay</label>
+  <span class="hint">Each ● = one part following the Excel From→To sequence.</span>
+</div>
+
+<div class="panels">
+  <section class="panel before">
+    <div class="ph before"><span class="tag">BEFORE</span> EXISTING FLOW — spaghetti <span class="len" id="lenB">—</span></div>
+    <div class="stage"><svg id="svgB" viewBox="0 0 1000 560"></svg></div>
+    <div class="pf">
+      <div class="status" id="stB">—</div>
+      <div class="prog"><i id="pgB"></i></div>
+      <div class="parts" id="ptB">parts completed: 0</div>
+      <div class="cap">OP-005 / OP-006 are in <b>Module-3 (off-line)</b>: every part shuttles EMEGR-2 → (top gang way) → Module-3 → (gang way) → back into Module-2 in ≈30-pc batches; WIP piles up at every hand-off.</div>
+    </div>
+  </section>
+  <section class="panel after">
+    <div class="ph after"><span class="tag">AFTER</span> PROPOSED FLOW — single-piece <span class="len" id="lenA">—</span></div>
+    <div class="stage"><svg id="svgA" viewBox="0 0 1000 560"></svg></div>
+    <div class="pf">
+      <div class="status" id="stA">—</div>
+      <div class="prog"><i id="pgA"></i></div>
+      <div class="parts" id="ptA">parts completed: 0</div>
+      <div class="cap">OP-005 / OP-006 relocated <b>into Module-2</b> as the first two stations → straight-through flow, <b>one piece per takt</b>, WIP = 1 pc between operations, zero off-line detours.</div>
+    </div>
+  </section>
+
+  <!-- ============ EXTRA VIEW: EXISTING LAYOUT ONLY ============ -->
+  <section class="panel before wide">
+    <div class="ph before"><span class="tag">EXISTING — FULL VIEW</span> EXISTING LAYOUT ONLY (BEFORE) <span class="len" id="lenC">—</span></div>
+    <div class="stage"><svg id="svgC" viewBox="0 0 1000 560"></svg></div>
+    <div class="pf">
+      <div class="status" id="stC">—</div>
+      <div class="prog"><i id="pgC"></i></div>
+      <div class="parts" id="ptC">parts completed: 0</div>
+      <div class="cap">Dedicated full-width view of the <b>EXISTING (before) layout</b> only — as per the floor-plan photo: Actuator-2 with OP160-200 on top / OP10-40 at bottom, Module-2 with OP-10…OP-70 on the right column and OP-90A…OP-140 on the left column, OP-005/OP-006 off-line in Module-3, STORE (FG) + gang way at top, all transfers via gang ways.</div>
+    </div>
+  </section>
+</div>
+
+<div class="stats">
+  <div class="card"><h4>Travel per part</h4>
+    <div class="bar b" id="barB1"><span id="tb">—</span></div>
+    <div class="bar a" id="barA1"><span id="ta">—</span></div>
+    <div class="delta" id="d1">—</div></div>
+  <div class="card"><h4>Gang-way crossings / part</h4>
+    <div class="bar b" id="barB2" style="width:100%"><span>5</span></div>
+    <div class="bar a" id="barA2" style="width:60%"><span>3</span></div>
+    <div class="delta">−40% crossings</div></div>
+  <div class="card"><h4>Off-line Module-3 trips / part</h4>
+    <div class="bar b" id="barB3" style="width:100%"><span>1</span></div>
+    <div class="bar a" id="barA3" style="width:4%"><span>0</span></div>
+    <div class="delta">detour eliminated</div></div>
+  <div class="card"><h4>Line-side WIP</h4>
+    <div class="bar b" id="barB4" style="width:100%"><span>≈100+ pcs (batches)</span></div>
+    <div class="bar a" id="barA4" style="width:16%"><span>≈16 pcs (1/op)</span></div>
+    <div class="delta">−84% WIP</div></div>
+  <div class="card"><h4>Transfer batch size</h4>
+    <div class="bar b" id="barB5" style="width:100%"><span>≈30 pcs / trolley</span></div>
+    <div class="bar a" id="barA5" style="width:4%"><span>1 pc</span></div>
+    <div class="delta">single-piece flow</div></div>
+</div>
+
+<div class="legend">
+  <span><span class="sw" style="border-color:#dc2626"></span>Product travel — EXISTING (long, zig-zag via Module-3)</span>
+  <span><span class="sw" style="border-color:#16a34a"></span>Product travel — PROPOSED (short, one line)</span>
+  <span><span class="sw" style="border-color:#888"></span>Sub-assembly feed (EMEGR-2 OP20→50, Actuator feeders)</span>
+  <span><span class="sw" style="border-color:#aaa"></span>Child-part delivery (via gang way)</span>
+  <span>▮ red pile = WIP queue &nbsp;•&nbsp; ▮ green chip = 1 pc &nbsp;•&nbsp; yellow = gang way</span>
+</div>
+
+<div class="note">
+  Schematic, not to scale — only the lines from the Excel table are modelled (balance of plant ignored). Station sequence follows the flow table exactly:
+  Existing: EMEGR-2 OP-90 → (gang way) → <b>Module-3</b> OP-005 → OP-006 → (gang way) → Module-2 OP-10 … OP-70 → OP-90A/B → OP-100 … OP-140 → (gang way) → Store.
+  Proposed: EMEGR-2 OP-90 → (gang way) → <b>Module-2</b> OP-005 → OP-006 → OP-10 … OP-140 → Store (the EMEGR-2 OP-90 → Module-2 OP-005 link is implied by table continuity).
+  Layout corrected per floor-plan photo: Actuator-2 OP160-200 at top / OP10-40 at bottom; Module-2 OP-10…70 right column, OP-90A…140 left column; STORE (FG) and main gang way at top; every line-to-line movement is routed through a gang way; all lines drawn solid (no dotted lines).
+  Travel distance is measured on the schematic paths (indicative). Sub-assembly stream EMEGR-2 OP-20→OP-50 and Actuator-2 feeders (OP70-100 / OP105-110 / OP120-150 → OP160-200) are shown as solid feed lines per the table.
+</div>
+
+<script>
+const NS='http://www.w3.org/2000/svg';
+const $=s=>document.querySelector(s);
+function el(n,a,p){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;}
+function makeD(a,b,o={}){
+  if(o.pts) return 'M'+o.pts.map(p=>p.join(',')).join(' L');
+  const[x1,y1]=a,[x2,y2]=b;
+  if(!o.bend) return `M${x1},${y1} L${x2},${y2}`;
+  const mx=(x1+x2)/2,my=(y1+y2)/2,dx=x2-x1,dy=y2-y1,dd=Math.hypot(dx,dy);
+  return `M${x1},${y1} Q${mx-dy/dd*o.bend},${my+dx/dd*o.bend} ${x2},${y2}`;
+}
+/* ---------------- shared floor geometry (schematic) ----------------
+   STORE (FG) + horizontal gang way at TOP (per floor plan photo).
+   Zones: MODULE-3 | MODULE-2 | EMEGR-2 | ACTUATOR-2, vertical gang ways between. */
+const ZONES=[{x:16,y:100,w:150,h:430},{x:196,y:100,w:270,h:430},{x:496,y:100,w:180,h:430},{x:706,y:100,w:278,h:430}];
+const GWS=[{x:166,y:100,w:30,h:430,v:1},{x:466,y:100,w:30,h:430,v:1},{x:676,y:100,w:30,h:430,v:1},
+           {x:16,y:68,w:968,h:26,v:0,lx:920,ly:83}];   /* main gang way at TOP */
+const STZ={x:16,y:10,w:150,h:52};                      /* STORE (FG) at TOP-LEFT */
+function S(id,label,x,y,zone,cls){return{id,label,x,y,zone,cls};}
+/* ACTUATOR-2 (per photo): OP160-200 TOP, OP10-40 BOTTOM */
+const ACT=[S('a160','OP160-200',766,200,'ACTUATOR-2'),S('a5060','OP50-60',766,290,'ACTUATOR-2'),S('a1040','OP10-40',766,380,'ACTUATOR-2'),
+ S('a70100','OP70-100',910,155,'ACTUATOR-2'),S('a120','OP120-150',910,245,'ACTUATOR-2'),S('a105','OP105-110',910,335,'ACTUATOR-2')];
+const EMG=[S('e20','OP-20',556,155,'EMEGR-2'),S('e25','OP-25',556,200,'EMEGR-2'),S('e30','OP-30',556,245,'EMEGR-2'),
+ S('e40','OP-40',556,290,'EMEGR-2'),S('e50','OP-50',556,335,'EMEGR-2'),S('e60','OP-60',646,470,'EMEGR-2'),
+ S('e70','OP-70',646,425,'EMEGR-2'),S('e80','OP-80',646,380,'EMEGR-2'),S('e90','OP-90',646,335,'EMEGR-2')];
+const M3=[S('m3005','OP-005',91,175,'MODULE-3'),S('m3006','OP-006',91,265,'MODULE-3')];
+/* MODULE-2 EXISTING (per photo): OP-10…OP-70 RIGHT column (down), OP-90A…OP-140 LEFT column (up) */
+const M2B=[S('m10','OP-10',406,155,'MODULE-2'),S('m20','OP-20',406,200,'MODULE-2'),S('m30','OP-30',406,245,'MODULE-2'),
+ S('m40','OP-40',406,290,'MODULE-2'),S('m50','OP-50',406,335,'MODULE-2'),S('m60','OP-60',406,380,'MODULE-2'),S('m70','OP-70',406,425,'MODULE-2'),
+ S('m90a','OP-90A',341,470,'MODULE-2'),S('m90b','OP-90B',276,425,'MODULE-2'),S('m100','OP-100',276,380,'MODULE-2'),S('m110','OP-110',276,335,'MODULE-2'),
+ S('m120','OP-120',276,290,'MODULE-2'),S('m130','OP-130',276,245,'MODULE-2'),S('m140','OP-140',276,200,'MODULE-2')];
+/* MODULE-2 PROPOSED: OP-005/OP-006 first, then OP-10 … OP-140 */
+const M2A=[S('m005','OP-005',276,155,'MODULE-2'),S('m006','OP-006',276,200,'MODULE-2'),S('m10','OP-10',276,245,'MODULE-2'),
+ S('m20','OP-20',276,290,'MODULE-2'),S('m30','OP-30',276,335,'MODULE-2'),S('m40','OP-40',276,380,'MODULE-2'),S('m50','OP-50',276,425,'MODULE-2'),
+ S('m60','OP-60',276,470,'MODULE-2'),S('m70','OP-70',406,470,'MODULE-2'),S('m90a','OP-90A',406,425,'MODULE-2'),S('m90b','OP-90B',406,380,'MODULE-2'),
+ S('m100','OP-100',406,335,'MODULE-2'),S('m110','OP-110',406,290,'MODULE-2'),S('m120','OP-120',406,245,'MODULE-2'),S('m130','OP-130',406,200,'MODULE-2'),
+ S('m140','OP-140',406,155,'MODULE-2')];
+const ST=S('store','STORE (FG)',91,36,'STORE','store');
+
+/* ---------------- routes straight from the Excel table ---------------- */
+const ROUTE_B=['a1040','a5060','a160','e60','e70','e80','e90','m3005','m3006','m10','m20','m30','m40','m50','m60','m70','m90a','m90b','m100','m110','m120','m130','m140','store'];
+const ROUTE_A=['a1040','a5060','a160','e60','e70','e80','e90','m005','m006','m10','m20','m30','m40','m50','m60','m70','m90a','m90b','m100','m110','m120','m130','m140','store'];
+const GEO_B={ /* spaghetti — every line-to-line move goes via a GANG WAY */
+ 'a160>e60' :{pts:[[766,200],[700,200],[700,470],[646,470]]},                       /* down the Actuator↔EMEGR gang way */
+ 'e90>m3005':{pts:[[646,335],[646,73],[91,73],[91,175]],label:'BATCH TRANSFER ≈ 30 PCS'}, /* along TOP gang way into Module-3 */
+ 'm3006>m10':{pts:[[91,265],[172,265],[172,155],[373,155]],label:'TROLLEY RETURN'}, /* up the Module-3↔Module-2 gang way */
+ 'm140>store':{pts:[[276,200],[276,88],[150,88],[150,60]]}                          /* out via TOP gang way to Store */
+};
+const GEO_A={
+ 'a160>e60' :{pts:[[766,200],[700,200],[700,470],[646,470]]},
+ 'e90>m005':{pts:[[646,335],[646,73],[276,73],[276,155]],label:'1-PC PULL'},        /* along TOP gang way straight into Module-2 */
+ 'm140>store':{pts:[[406,155],[406,88],[150,88],[150,60]]}
+};
+const FEEDERS=[['e20','e25'],['e25','e30'],['e30','e40'],['e40','e50'],['e50','e60',{bend:55}],
+ ['a70100','a160'],['a105','a160'],['a120','a160']];                                /* all SOLID lines */
+const CHILD_B=[{pts:[[166,200],[243,200]]},{pts:[[166,290],[243,290]]},{pts:[[166,425],[243,425]]}]; /* cross gang way 1 */
+const CHILD_A=[{pts:[[166,245],[243,245]]},{pts:[[166,470],[243,470]]}];
+const WIP_B=[{x:610,y:290,n:'≈30',t:'WIP'},{x:91,y:220,n:'≈30',t:'WIP'},{x:140,y:128,n:'≈30',t:'WIP'},{x:341,y:280,n:'≈12',t:'queues'}];
+const WIP_A=[{x:420,y:112,n:'1 pc',t:'pull'},{x:341,y:280,n:'1 pc',t:'per op'}];
+
+/* ---------------- simulation panel ---------------- */
+class Panel{
+ constructor(svg,cfg,ui){this.svg=svg;this.cfg=cfg;this.ui=ui;this.speed=1;this.playing=false;
+  this.travelers=[];this.fdots=[];this.releases={};this.parts=0;this.stMap={};this.build();
+  this.total=this.edges.reduce((s,e)=>s+e.len,0);
+  this.cum=[0];this.edges.forEach((e,i)=>this.cum.push(this.cum[i]+e.len));
+  ui.len.textContent='≈ '+Math.round(this.total*0.033)+' m / part';}
+ build(){
+  const c=this.cfg,svg=this.svg;svg.innerHTML='';
+  c.stations.forEach(s=>{this.stMap[s.id]={...s};});
+  const defs=el('defs',{},svg);
+  const pat=el('pattern',{id:'grid'+c.pid,width:24,height:24,patternUnits:'userSpaceOnUse'},defs);
+  el('path',{d:'M24 0H0V24',fill:'none',stroke:'#e2e8f0','stroke-width':1},pat);
+  const mk=el('marker',{id:'arr'+c.pid,viewBox:'0 0 10 10',refX:8,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'},defs);
+  el('path',{d:'M0,0L10,5L0,10z',fill:c.color},mk);
+  el('rect',{x:0,y:0,width:1000,height:560,fill:'#f8fafc'},svg);
+  el('rect',{x:0,y:0,width:1000,height:560,fill:`url(#grid${c.pid})`},svg);
+  GWS.forEach(g=>{el('rect',{x:g.x,y:g.y,width:g.w,height:g.h,fill:'#fde047',stroke:'#eab308'},svg);
+   const lx=g.lx??(g.x+g.w/2),ly=g.ly??(g.y+g.h/2);
+   const t=el('text',{x:lx,y:ly,class:'gwlabel',transform:g.v?`rotate(-90 ${lx} ${ly})`:''},svg);t.textContent='GANG WAY';});
+  ZONES.forEach((z,i)=>{const f=i===0?(c.flavor==='B'?'#fef2f2':'#f8fafc'):i===1?(c.flavor==='A'?'#f0fdf4':'#fff'):'#fff';
+   el('rect',{x:z.x,y:z.y,width:z.w,height:z.h,rx:6,fill:f,stroke:'#94a3b8','stroke-width':1.2},svg);});
+  el('rect',{x:STZ.x,y:STZ.y,width:STZ.w,height:STZ.h,rx:6,fill:'#dcfce7',stroke:'#15803d','stroke-width':1.2},svg);
+  const zl=c.flavor==='B'?['MODULE-3','MODULE-2','EMEGR-2','ACTUATOR-2']:['KITTING AREA','MODULE-2','EMEGR-2','ACTUATOR-2'];
+  ZONES.forEach((z,i)=>{const t=el('text',{x:z.x+z.w/2,y:z.y+z.h-12,class:'zlabel'},svg);t.textContent=zl[i];});
+  const gO=this.gO=el('g',{class:'overlay'},svg);
+  c.child.forEach(pp=>el('path',{d:'M'+pp.pts.map(p=>p.join(',')).join(' L'),class:'edge-child',stroke:c.color},gO));
+  this.fedges=[];
+  c.feeders.forEach(f=>{const[a,b,o={}]=f,A=this.stMap[a],B=this.stMap[b];
+   const p=el('path',{d:makeD([A.x,A.y],[B.x,B.y],o),class:'edge-feed',stroke:c.color,'marker-end':`url(#arr${c.pid})`},gO);
+   this.fedges.push({p,len:p.getTotalLength()});});
+  this.edges=[];
+  c.route.forEach((id,i)=>{if(i===c.route.length-1)return;
+   const A=this.stMap[id],B=this.stMap[c.route[i+1]],o=c.geo[A.id+'>'+B.id]||{};
+   const p=el('path',{d:makeD([A.x,A.y],[B.x,B.y],o),class:'edge-main',stroke:c.color,'marker-end':`url(#arr${c.pid})`,id:'e'+c.pid+i},gO);
+   this.edges.push({p,len:p.getTotalLength(),from:A,to:B,i,sync:c.syncTo.has(B.id)});
+   if(o.label){const tx=el('text',{class:'eplabel',fill:c.dark},gO);
+    const tp=el('textPath',{href:'#e'+c.pid+i,startOffset:'50%','text-anchor':'middle'},tx);tp.textContent=o.label;}});
+  if(c.onepiece){const d=this.edges.slice(6,22).map(e=>e.p.getAttribute('d')).join(' ');
+   const glow=el('path',{d,fill:'none',stroke:c.color,'stroke-width':9,opacity:.15,'stroke-linecap':'round','stroke-linejoin':'round'});
+   gO.insertBefore(glow,this.edges[0].p);}
+  c.wips.forEach(w=>{if(c.flavor==='B'){const g=el('g',{class:'wippile'},gO);
+    el('rect',{x:w.x-16,y:w.y+2,width:32,height:9,rx:1.5},g);el('rect',{x:w.x-12,y:w.y-6,width:24,height:8,rx:1.5},g);
+    el('rect',{x:w.x-8,y:w.y-13,width:16,height:7,rx:1.5},g);
+    const t=el('text',{x:w.x,y:w.y+22},g);t.textContent=w.t+' '+w.n;
+   }else{const g=el('g',{class:'chip'},gO);el('rect',{x:w.x-24,y:w.y-10,width:48,height:18,rx:9},g);
+    const t=el('text',{x:w.x,y:w.y+3},g);t.textContent=w.n+' '+w.t;}});
+  if(c.ghosts)[{y:175,t:'OP-005'},{y:265,t:'OP-006'}].forEach(g0=>{const g=el('g',{class:'ghost'},gO);
+    el('rect',{x:39,y:g0.y-17,width:104,height:34,rx:4},g);
+    const t=el('text',{x:91,y:g0.y-2},g);t.textContent=g0.t;
+    const t2=el('text',{x:91,y:g0.y+10,class:'sub2'},g);t2.textContent='relocated → Module-2';});
+  const gS=el('g',{},svg);
+  c.stations.forEach(s=>{const st=this.stMap[s.id],g=el('g',{class:'stn'+(s.cls?' '+s.cls:'')},gS);
+   const w=s.cls==='store'?150:66,h=s.cls==='store'?46:34;
+   el('rect',{x:st.x-w/2,y:st.y-h/2,width:w,height:h,rx:5},g);
+   const t=el('text',{x:st.x,y:st.y+3.5},g);t.textContent=st.label;st.g=g;});
+  const t1=el('text',{x:766,y:418,class:'itag','text-anchor':'middle'},svg);t1.textContent='INPUT';
+  const t2=el('text',{x:518,y:159,class:'itag'},svg);t2.textContent='SUB-ASSY IN';
+  this.gT=el('g',{},svg);
+ }
+ setStatus(e){this.ui.status.textContent=`${e.from.zone} · ${e.from.label}  →  ${e.to.label}`;}
+ flash(id){const s=this.stMap[id];s.g.classList.add('on');clearTimeout(s.tm);s.tm=setTimeout(()=>s.g.classList.remove('on'),420);}
+ spawn(seedFrac,startAt){let i=0,d=0;
+  if(seedFrac!=null){const target=seedFrac*this.total;while(i<this.edges.length-1&&this.cum[i+1]<target)i++;d=target-this.cum[i];}
+  const g=el('g',{opacity:0},this.gT);
+  el('circle',{r:10,fill:this.cfg.color,opacity:.25},g);
+  el('circle',{r:4.6,fill:this.cfg.color,stroke:'#fff','stroke-width':1.4},g);
+  const pt=this.edges[i].p.getPointAtLength(d);g.setAttribute('transform',`translate(${pt.x},${pt.y})`);
+  this.travelers.push({g,i,d,startAt,waitUntil:0,relKey:null});}
+ tick(now,dt){if(!this.playing)return;const c=this.cfg;
+  if(now>=this.nextSpawn){for(let k=0;k<c.batch;k++)this.spawn(null,now+k*280);this.nextSpawn=now+c.spawnEvery/this.speed;}
+  if(now>=this.nextFd){const f=this.fedges[Math.floor(Math.random()*this.fedges.length)];
+   const g=el('g',{opacity:.85},this.gT);el('circle',{r:3,fill:this.cfg.color},g);
+   this.fdots.push({g,e:f,d:0});this.nextFd=now+1800/this.speed+Math.random()*1800;}
+  for(let n=this.travelers.length-1;n>=0;n--){const tr=this.travelers[n];
+   if(now<tr.startAt)continue;
+   tr.g.setAttribute('opacity',1);
+   if(tr.waitUntil){if(now>=tr.waitUntil){if(tr.relKey!=null){delete this.releases[tr.relKey];tr.relKey=null;}tr.waitUntil=0;}else continue;}
+   const e=this.edges[tr.i];
+   tr.d+=c.pxPerSec*this.speed*dt/1000;
+   if(tr.d>=e.len)this.arrive(tr,now,n);
+   else{const pt=e.p.getPointAtLength(tr.d);tr.g.setAttribute('transform',`translate(${pt.x},${pt.y})`);
+    if(n===0)this.ui.prog.style.width=((this.cum[tr.i]+tr.d)/this.total*100).toFixed(1)+'%';}}
+  for(let n=this.fdots.length-1;n>=0;n--){const f=this.fdots[n];f.d+=c.pxPerSec*1.15*this.speed*dt/1000;
+   if(f.d>=f.e.len){f.g.remove();this.fdots.splice(n,1);}
+   else{const pt=f.e.p.getPointAtLength(f.d);f.g.setAttribute('transform',`translate(${pt.x},${pt.y})`);}}}
+ arrive(tr,now,n){const e=this.edges[tr.i],c=this.cfg;
+  this.flash(e.to.id);this.setStatus(e);
+  if(tr.i===this.edges.length-1){tr.g.remove();this.travelers.splice(n,1);this.parts++;
+   this.ui.parts.textContent='parts completed: '+this.parts;this.ui.prog.style.width='0%';return;}
+  if(e.sync){const k=tr.i;if(this.releases[k]==null)this.releases[k]=now+c.batchWait/this.speed;
+   tr.relKey=k;tr.waitUntil=this.releases[k];}
+  else tr.waitUntil=now+c.dwell/this.speed;
+  tr.i++;tr.d=0;}
+ reset(now){this.travelers.forEach(t=>t.g.remove());this.travelers=[];this.fdots.forEach(f=>f.g.remove());this.fdots=[];
+  this.releases={};this.parts=0;this.ui.parts.textContent='parts completed: 0';this.ui.prog.style.width='0%';this.ui.status.textContent='—';
+  this.nextSpawn=now+900;this.nextFd=now+400;this.cfg.seed.forEach(f=>this.spawn(f,now+300));}
+}
+
+const cfgB={pid:'B',flavor:'B',color:'#dc2626',dark:'#991b1b',stations:[...ACT,...EMG,...M3,...M2B,ST],route:ROUTE_B,geo:GEO_B,
+ feeders:FEEDERS,child:CHILD_B,wips:WIP_B,syncTo:new Set(['e90','m3005','m3006','m10']),
+ dwell:800,batchWait:2200,spawnEvery:9000,batch:6,seed:[0.30,0.62],pxPerSec:120,ghosts:false,onepiece:false};
+const cfgA={pid:'A',flavor:'A',color:'#16a34a',dark:'#166534',stations:[...ACT,...EMG,...M2A,ST],route:ROUTE_A,geo:GEO_A,
+ feeders:FEEDERS,child:CHILD_A,wips:WIP_A,syncTo:new Set(),
+ dwell:520,batchWait:0,spawnEvery:4500,batch:1,seed:[0.35,0.72],pxPerSec:120,ghosts:true,onepiece:true};
+const cfgC={...cfgB,pid:'C'};   /* dedicated EXISTING-layout-only view (same flavour as BEFORE) */
+
+const pB=new Panel($('#svgB'),cfgB,{len:$('#lenB'),status:$('#stB'),prog:$('#pgB'),parts:$('#ptB')});
+const pA=new Panel($('#svgA'),cfgA,{len:$('#lenA'),status:$('#stA'),prog:$('#pgA'),parts:$('#ptA')});
+const pC=new Panel($('#svgC'),cfgC,{len:$('#lenC'),status:$('#stC'),prog:$('#pgC'),parts:$('#ptC')});
+
+/* stats from measured path lengths */
+(function(){const max=pB.total,mB=Math.round(max*0.033),mA=Math.round(pA.total*0.033);
+ $('#barB1').style.width='100%';$('#barA1').style.width=(pA.total/max*100).toFixed(0)+'%';
+ $('#tb').textContent='≈ '+mB+' m';$('#ta').textContent='≈ '+mA+' m';
+ $('#d1').textContent='− '+Math.round((1-pA.total/max)*100)+'% travel per part';})();
+
+/* controls */
+let playing=true;
+function setPlay(v){playing=v;pB.playing=v;pA.playing=v;pC.playing=v;
+ $('#btnPlay').textContent=v?'⏸ Pause':'▶ Play';$('#btnPlay').classList.toggle('primary',!v);}
+ $('#btnPlay').onclick=()=>setPlay(!playing);
+ $('#btnReset').onclick=()=>{const now=performance.now();pB.reset(now);pA.reset(now);pC.reset(now);setPlay(true);};
+ $('#spd').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+ const s=parseFloat(b.dataset.s);pB.speed=s;pA.speed=s;pC.speed=s;
+ document.querySelectorAll('#spd button').forEach(x=>x.classList.toggle('active',x===b));});
+ $('#chkOverlay').onchange=e=>[pB,pA,pC].forEach(p=>p.gO.style.display=e.target.checked?'':'none');
+
+/* boot + animation loop */
+const t0=performance.now();pB.reset(t0);pA.reset(t0);pC.reset(t0);setPlay(true);
+let last=performance.now();
+function loop(now){const dt=Math.min(50,now-last);last=now;pB.tick(now,dt);pA.tick(now,dt);pC.tick(now,dt);requestAnimationFrame(loop);}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000">
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="bgGlow" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#0b1b36"/>
+      <stop offset="70%" stop-color="#040913"/>
+      <stop offset="100%" stop-color="#020408"/>
+    </radialGradient>
+
+    <!-- Neon Glow Filter -->
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="10" result="blur1" />
+      <feGaussianBlur stdDeviation="25" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur2" />
+        <feMergeNode in="blur1" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <style>
+    .font-title { font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; font-weight: 800; }
+    .font-body { font-family: 'Segoe UI', Roboto, Helvetica, sans-serif; }
+  </style>
+
+  <!-- Background -->
+  <rect width="800" height="1000" fill="url(#bgGlow)" />
+
+  <!-- Neon Border Frame -->
+  <rect x="40" y="40" width="720" height="920" rx="20" fill="none" stroke="#00a6ff" stroke-width="4" filter="url(#neonGlow)" />
+  <rect x="40" y="40" width="720" height="920" rx="20" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.8"/>
+
+  <!-- Top Left: Category Badge -->
+  <g transform="translate(70, 75)">
+    <rect x="0" y="0" width="180" height="32" rx="6" fill="#0c2340" stroke="#00a6ff" stroke-width="1.5" />
+    <text x="90" y="21" fill="#38bdf8" class="font-title" font-size="12" letter-spacing="2" text-anchor="middle">ONLINE DISCUSSION</text>
+  </g>
+
+  <!-- Top Right: Date Badge -->
+  <g transform="translate(540, 75)">
+    <rect x="0" y="0" width="60" height="34" rx="4" fill="#0077ff" />
+    <text x="30" y="24" fill="#ffffff" class="font-title" font-size="18" text-anchor="middle">03</text>
+    <rect x="62" y="0" width="128" height="34" rx="4" fill="#00e5ff" />
+    <text x="126" y="23" fill="#040913" class="font-title" font-size="15" text-anchor="middle">OCT 2026</text>
+    <text x="190" y="55" fill="#94a3b8" class="font-body" font-size="13" text-anchor="end" font-weight="600">22:00 – 23:00 IST</text>
+  </g>
+
+  <!-- Left Column: Topic & Details -->
+  <g transform="translate(70, 190)">
+    <text x="0" y="0" fill="#38bdf8" class="font-title" font-size="13" letter-spacing="2">TOPIC</text>
+    
+    <text x="0" y="40" fill="#ffffff" class="font-title" font-size="34">Understanding</text>
+    <text x="0" y="82" fill="#00e5ff" class="font-title" font-size="34" filter="url(#neonGlow)">JEV.AI</text>
+    <text x="120" y="82" fill="#ffffff" class="font-title" font-size="34">with Use Cases</text>
+    
+    <text x="0" y="125" fill="#94a3b8" class="font-body" font-size="18" font-weight="500">&amp; Weekly News Update on AI</text>
+  </g>
+
+  <!-- Speaker Information -->
+  <g transform="translate(70, 420)">
+    <text x="0" y="0" fill="#64748b" class="font-title" font-size="13" letter-spacing="3">FEATURED SPEAKER</text>
+    
+    <text x="0" y="45" fill="#ffffff" class="font-title" font-size="36">Aryan Chavan</text>
+    
+    <text x="0" y="80" fill="#00e5ff" class="font-title" font-size="20">AI Engineer</text>
+    <text x="0" y="106" fill="#cbd5e1" class="font-body" font-size="17">Konverge AI</text>
+  </g>
+
+  <!-- Speaker Cutout Area (Placeholder frame) -->
+  <g transform="translate(450, 240)">
+    <!-- Circular / Glow backdrop for Speaker -->
+    <circle cx="150" cy="180" r="160" fill="#0077ff" opacity="0.15" filter="url(#neonGlow)"/>
+    <rect x="0" y="20" width="280" height="380" rx="16" fill="#0f172a" opacity="0.6" stroke="#1e293b" stroke-width="2"/>
+    <text x="140" y="200" fill="#64748b" class="font-body" font-size="14" text-anchor="middle">[ Place Aryan's Photo Here ]</text>
+  </g>
+
+  <!-- Bottom Panel: Google Meet & QR Code -->
+  <g transform="translate(70, 800)">
+    <rect x="0" y="0" width="660" height="110" rx="16" fill="#0a1526" stroke="#1e3a5f" stroke-width="1.5" />
+    
+    <!-- QR Box Placeholder -->
+    <rect x="15" y="15" width="80" height="80" rx="8" fill="#ffffff" />
+    <text x="55" y="60" fill="#000000" class="font-body" font-size="11" text-anchor="middle" font-weight="bold">[ QR Code ]</text>
+
+    <!-- Join Info -->
+    <text x="115" y="45" fill="#ffffff" class="font-title" font-size="16">SCAN QR CODE TO JOIN</text>
+    <text x="115" y="75" fill="#38bdf8" class="font-body" font-size="14" font-weight="bold">meet.google.com/tgp-ktvm-jse</text>
+
+    <!-- Platform Badge -->
+    <rect x="520" y="35" width="120" height="40" rx="8" fill="#0077ff" />
+    <text x="580" y="60" fill="#ffffff" class="font-title" font-size="14" text-anchor="middle">JOIN LIVE</text>
+  </g>
+</svg>
